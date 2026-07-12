@@ -1,10 +1,10 @@
 -- MoldOS App: calc
--- Простой калькулятор. Поддерживает + - * / ( )
--- Введи 'exit' чтобы выйти
+-- Simple calculator. Supports + - * / ( )
+-- Type 'exit' to quit
 
-print("=== Калькулятор MoldOS ===")
-print("Введи выражение (например: 2 + 2 * 3)")
-print("Команда 'exit' - выход")
+print("=== MoldOS Calculator ===")
+print("Enter an expression (e.g. 2 + 2 * 3)")
+print("Type 'exit' to quit")
 print("")
 
 while true do
@@ -22,12 +22,12 @@ while true do
             if ok then
                 print("= " .. tostring(result))
             else
-                printError("Ошибка вычисления")
+                printError("Calculation error")
             end
         else
-            printError("Некорректное выражение")
+            printError("Invalid expression")
         end
     else
-        printError("Разрешены только числа и операторы + - * / ( )")
+        printError("Only numbers and + - * / ( ) are allowed")
     end
 end
