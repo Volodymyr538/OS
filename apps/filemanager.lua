@@ -24,14 +24,12 @@ local function getEntries(path)
     return entries
 end
 
--- toolbar buttons: [New Folder] [Delete] [Quit], plus entry rows
 local function draw(entries, selectedIdx)
     clear()
     term.write("=== File Manager: " .. currentPath .. " ===")
     term.setCursorPos(1, 2)
     term.write(string.rep("-", W))
 
-    -- toolbar
     local toolbarY = H
     term.setCursorPos(1, toolbarY)
     term.write("[New Folder]  [Delete]  [Quit]")
