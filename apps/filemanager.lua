@@ -1,5 +1,5 @@
 -- MoldOS App: filemanager
--- Простой файловый менеджер с навигацией стрелками
+-- Simple file manager with arrow-key navigation
 
 local W, H = term.getSize()
 local currentPath = "/"
@@ -26,7 +26,7 @@ end
 
 local function draw(entries, selected)
     clear()
-    term.write("=== Файловый менеджер: " .. currentPath .. " ===")
+    term.write("=== File Manager: " .. currentPath .. " ===")
     term.setCursorPos(1, 2)
     term.write(string.rep("-", W))
 
@@ -63,12 +63,12 @@ local function draw(entries, selected)
 
     term.setTextColor(colors.white)
     term.setCursorPos(1, H)
-    term.write("Enter-открыть  D-удалить  N-новая папка  Q-выход")
+    term.write("Enter-open  D-delete  N-new folder  Q-quit")
 end
 
 local function confirmDelete(name)
     clear()
-    term.write("Удалить '" .. name .. "'? (y/n)")
+    term.write("Delete '" .. name .. "'? (y/n)")
     while true do
         local _, key = os.pullEvent("key")
         if key == keys.y then return true end
@@ -78,14 +78,14 @@ end
 
 local function newFolder()
     clear()
-    term.write("Название новой папки:")
+    term.write("New folder name:")
     term.setCursorPos(1, 3)
     write("> ")
     local name = read()
     if name and name ~= "" then
         local ok, err = pcall(fs.makeDir, fs.combine(currentPath, name))
         if not ok then
-            printError("Не удалось создать папку: " .. tostring(err))
+            printError("Failed to create folder: " .. tostring(err))
             sleep(1.5)
         end
     end
@@ -131,7 +131,7 @@ local function main()
                     local entryPath = fs.combine(currentPath, name)
                     local ok, err = pcall(fs.delete, entryPath)
                     if not ok then
-                        printError("Не удалось удалить: " .. tostring(err))
+                        printError("Failed to delete: " .. tostring(err))
                         sleep(1.5)
                     end
                     selected = 1
