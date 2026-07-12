@@ -6,18 +6,20 @@
 local W, H = term.getSize()
 local DATA_DIR = "/os/data"
 local APPS_DIR = "/os/apps"
-local osName, osVersion = "MoldOS", "1.1"
+local osName, osVersion = "MoldOS", "1.2"
 
--- GitHub repo used for update / install
 local REPO_BASE = "https://raw.githubusercontent.com/Volodymyr538/OS/main/"
 local SYSTEM_FILES = {
     { url = REPO_BASE .. "os/startup.lua", path = "/os/startup.lua" },
 }
--- registry of installable apps: name -> raw url
 local APP_REGISTRY = {
-    filemanager = REPO_BASE .. "apps/filemanager.lua",
-    sysinfo     = REPO_BASE .. "apps/sysinfo.lua",
-    calc        = REPO_BASE .. "apps/calc.lua",
+    filemanager  = REPO_BASE .. "apps/filemanager.lua",
+    sysinfo      = REPO_BASE .. "apps/sysinfo.lua",
+    calc         = REPO_BASE .. "apps/calc.lua",
+    netshare     = REPO_BASE .. "apps/netshare.lua",
+    notes        = REPO_BASE .. "apps/notes.lua",
+    snake        = REPO_BASE .. "apps/snake.lua",
+    minesweeper  = REPO_BASE .. "apps/minesweeper.lua",
 }
 
 -- ---------- monitor mirroring ----------
@@ -29,7 +31,6 @@ end
 
 local originalTerm = term.current()
 
--- wraps term functions so output goes to both computer screen and monitor
 local function mirror(fnName)
     return function(...)
         local args = { ... }
@@ -114,57 +115,79 @@ local function bootScreen()
 end
 
 -- ============================================
---  LOGIN SCREEN
+--  LOGIN SCREEN (click your account, then type password)
 -- ============================================
 
 local function loginScreen()
-    local anyUser = next(users)
-    if not anyUser then
+    local userList = {}
+    for name in pairs(users) do
+        table.insert(userList, name)
+    end
+    table.sort(userList)
+
+    if #userList == 0 then
         return "guest"
     end
 
     while true do
         clear()
-        center(4, osName)
-        center(6, "Login")
-        term.setCursorPos(1, 3)
+        center(3, osName)
+        center(5, "Select your account")
+        term.setCursorPos(1, 4)
         term.write(string.rep("-", W))
 
-        term.setCursorPos(4, 8)
-        term.write("Username: ")
-        local inputUser = read()
+        local rows = {}
+        local y = 7
+        for _, name in ipairs(userList) do
+            term.setCursorPos(4, y)
+            term.write("[ " .. name .. " ]")
+            table.insert(rows, { y = y, name = name })
+            y = y + 1
+        end
 
-        local userData = users[inputUser]
-        if not userData then
-            term.setCursorPos(4, 11)
-            term.setTextColor(colors.red)
-            term.write("User not found.")
-            term.setTextColor(colors.white)
-            sleep(1.2)
-        else
-            term.setCursorPos(4, 9)
-            term.write("Password: ")
-            local inputPass = read("*")
+        local _, _, cx, cy = os.pullEvent("mouse_click")
+        local chosen = nil
+        for _, row in ipairs(rows) do
+            if cy == row.y then
+                chosen = row.name
+                break
+            end
+        end
 
-            if userData.password == "" or userData.password == inputPass then
-                return inputUser
-            else
-                term.setCursorPos(4, 11)
-                term.setTextColor(colors.red)
-                term.write("Incorrect password.")
-                term.setTextColor(colors.white)
-                sleep(1.2)
+        if chosen then
+            local userData = users[chosen]
+            while true do
+                clear()
+                center(3, osName)
+                center(5, "Welcome back, " .. chosen)
+                term.setCursorPos(1, 4)
+                term.write(string.rep("-", W))
+
+                term.setCursorPos(4, 8)
+                term.write("Password: ")
+                local inputPass = read("*")
+
+                if userData.password == "" or userData.password == inputPass then
+                    return chosen
+                else
+                    term.setCursorPos(4, 10)
+                    term.setTextColor(colors.red)
+                    term.write("Incorrect password.")
+                    term.setTextColor(colors.white)
+                    sleep(1.2)
+                    break
+                end
             end
         end
     end
 end
 
 -- ============================================
---  GREETING (time of day)
+--  GREETING & CLOCK
 -- ============================================
 
 local function getGreeting()
-    local hour = os.time("ingame")  -- 0.0 to 24.0
+    local hour = os.time("ingame")
     if hour >= 5 and hour < 12 then
         return "Good morning"
     elseif hour >= 12 and hour < 17 then
@@ -174,6 +197,13 @@ local function getGreeting()
     else
         return "Good night"
     end
+end
+
+local function getClockString()
+    local hour = os.time("ingame")
+    local h = math.floor(hour)
+    local m = math.floor((hour - h) * 60)
+    return string.format("%02d:%02d", h, m)
 end
 
 local function showGreeting(user)
@@ -272,6 +302,162 @@ local function runInstall()
 end
 
 -- ============================================
+--  SETTINGS
+-- ============================================
+
+local currentUser = nil
+
+local function changePassword()
+    clear()
+    print("=== Change Password ===")
+    print("")
+    write("Current password: ")
+    local current = read("*")
+
+    local userData = users[currentUser]
+    if userData.password ~= "" and userData.password ~= current then
+        print("")
+        print("Incorrect current password.")
+        sleep(1.5)
+        return
+    end
+
+    write("New password (leave empty for none): ")
+    local newPass = read("*")
+    userData.password = newPass
+    saveTable(DATA_DIR .. "/users.lua", users)
+
+    print("")
+    print("Password changed successfully!")
+    sleep(1.2)
+end
+
+local function renameUser()
+    clear()
+    print("=== Change Username ===")
+    print("")
+    write("New username: ")
+    local newName = read()
+
+    if not newName or newName == "" then
+        return
+    end
+    if users[newName] then
+        print("")
+        print("That username is already taken.")
+        sleep(1.5)
+        return
+    end
+
+    users[newName] = users[currentUser]
+    users[currentUser] = nil
+    currentUser = newName
+    saveTable(DATA_DIR .. "/users.lua", users)
+
+    print("")
+    print("Username changed to '" .. newName .. "'!")
+    sleep(1.2)
+end
+
+local function createUser()
+    clear()
+    print("=== New User ===")
+    print("")
+    write("Username: ")
+    local newName = read()
+
+    if not newName or newName == "" then
+        return
+    end
+    if users[newName] then
+        print("")
+        print("That username already exists.")
+        sleep(1.5)
+        return
+    end
+
+    write("Password (leave empty for none): ")
+    local newPass = read("*")
+
+    users[newName] = { password = newPass }
+    saveTable(DATA_DIR .. "/users.lua", users)
+
+    print("")
+    print("User '" .. newName .. "' created!")
+    sleep(1.2)
+end
+
+local function deleteUser()
+    clear()
+    print("=== Delete a User ===")
+    print("")
+    for name in pairs(users) do
+        print("  " .. name)
+    end
+    print("")
+    write("Username to delete: ")
+    local targetName = read()
+
+    if targetName == currentUser then
+        print("")
+        print("You cannot delete the account you are logged into.")
+        sleep(1.5)
+        return
+    end
+    if not users[targetName] then
+        print("")
+        print("User not found.")
+        sleep(1.5)
+        return
+    end
+
+    users[targetName] = nil
+    saveTable(DATA_DIR .. "/users.lua", users)
+    print("")
+    print("User '" .. targetName .. "' deleted.")
+    sleep(1.2)
+end
+
+local function runSettings()
+    local options = {
+        { label = "Change Password", action = changePassword },
+        { label = "Change Username", action = renameUser },
+        { label = "Create New User", action = createUser },
+        { label = "Delete a User",   action = deleteUser },
+        { label = "Back",            action = function() return "back" end },
+    }
+
+    while true do
+        clear()
+        term.write("=== Settings ===")
+        local y = 3
+        local rows = {}
+        for _, opt in ipairs(options) do
+            term.setCursorPos(4, y)
+            term.write("[ " .. opt.label .. " ]")
+            table.insert(rows, { y = y, action = opt.action })
+            y = y + 1
+        end
+
+        local _, _, cx, cy = os.pullEvent("mouse_click")
+        for _, row in ipairs(rows) do
+            if cy == row.y then
+                local result = row.action()
+                if result == "back" then
+                    return
+                end
+                break
+            end
+        end
+    end
+end
+
+local function logOut()
+    currentUser = loginScreen()
+    showGreeting(currentUser)
+end
+
+-- ============================================
 --  RENDET (network chat)
 -- ============================================
 
@@ -335,8 +521,6 @@ end
 --  APP LIST (click to launch)
 -- ============================================
 
-local currentUser = nil
-
 local systemActions = {
     { label = "About System",  action = function()
         clear()
@@ -350,8 +534,10 @@ local systemActions = {
         os.pullEvent("mouse_click")
     end },
     { label = "Network Chat", action = rednetChat },
+    { label = "Settings", action = runSettings },
     { label = "Check for Updates", action = runUpdate },
     { label = "Install App", action = runInstall },
+    { label = "Log Out", action = logOut },
     { label = "Reboot",   action = function() os.reboot() end },
     { label = "Shutdown", action = function() os.shutdown() end },
 }
@@ -376,6 +562,13 @@ local function drawMenu(apps)
     term.setCursorPos(1, 1)
     term.write(string.rep("=", W))
     center(2, osName .. " - " .. getGreeting() .. ", " .. currentUser)
+
+    local clockStr = getClockString()
+    term.setCursorPos(W - #clockStr, 1)
+    term.setTextColor(colors.yellow)
+    term.write(clockStr)
+    term.setTextColor(colors.white)
+
     term.setCursorPos(1, 3)
     term.write(string.rep("=", W))
 
@@ -425,7 +618,25 @@ local function menuLoop()
         local apps = getAppList()
         local rows = drawMenu(apps)
 
-        local _, _, cx, cy = os.pullEvent("mouse_click")
+        local timerId = os.startTimer(1)
+        local clicked = false
+        local cx, cy
+
+        while not clicked do
+            local event, p1, p2, p3 = os.pullEvent()
+            if event == "mouse_click" then
+                cx, cy = p2, p3
+                clicked = true
+            elseif event == "timer" and p1 == timerId then
+                local clockStr = getClockString()
+                term.setCursorPos(W - #clockStr, 1)
+                term.setTextColor(colors.yellow)
+                term.write(clockStr)
+                term.setTextColor(colors.white)
+                timerId = os.startTimer(1)
+            end
+        end
+
         for _, row in ipairs(rows) do
             if cy == row.y then
                 local ok, err = pcall(row.action)
