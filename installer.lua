@@ -1,6 +1,6 @@
 -- ============================================
 --  MoldOS Installer
---  Запускается через: wget run <ссылка на installer.lua с GitHub>
+--  Run via: wget run <link to installer.lua on GitHub>
 -- ============================================
 
 local REPO_BASE = "https://raw.githubusercontent.com/Volodymyr538/OS/main/"
@@ -14,7 +14,7 @@ local FILES_TO_DOWNLOAD = {
 
 local W, H = term.getSize()
 
--- ---------- утилиты интерфейса ----------
+-- ---------- UI helpers ----------
 
 local function clear()
     term.setBackgroundColor(colors.black)
@@ -42,11 +42,11 @@ end
 local function waitKey(msg)
     local _, h = term.getSize()
     term.setCursorPos(1, h)
-    term.write(msg or "Нажми любую клавишу...")
+    term.write(msg or "Press any key...")
     os.pullEvent("key")
 end
 
--- меню выбора из списка (стрелки + Enter)
+-- select menu (arrows + Enter)
 local function selectMenu(title, options)
     local selected = 1
     while true do
@@ -63,7 +63,7 @@ local function selectMenu(title, options)
         end
         term.setTextColor(colors.white)
         term.setCursorPos(1, H)
-        term.write("Стрелки - выбор, Enter - подтвердить")
+        term.write("Arrows - select, Enter - confirm")
 
         local _, key = os.pullEvent("key")
         if key == keys.up then
@@ -78,7 +78,7 @@ local function selectMenu(title, options)
     end
 end
 
--- ввод текста с заголовком
+-- text input with title
 local function textInput(title, prompt, hideChar, allowEmpty)
     while true do
         header(title)
@@ -91,13 +91,13 @@ local function textInput(title, prompt, hideChar, allowEmpty)
         end
         term.setCursorPos(1, 9)
         term.setTextColor(colors.red)
-        term.write("Поле не может быть пустым!")
+        term.write("This field cannot be empty!")
         term.setTextColor(colors.white)
         sleep(1)
     end
 end
 
--- ---------- прогресс-бар установки ----------
+-- ---------- progress bar ----------
 
 local function progressStep(label, y, duration)
     term.setCursorPos(4, y)
@@ -116,88 +116,88 @@ local function progressStep(label, y, duration)
 end
 
 -- ============================================
---  ШАГ 1: Приветствие
+--  STEP 1: Welcome
 -- ============================================
 
-header("Установка MoldOS")
-term.write("Добро пожаловать в мастер установки MoldOS.")
+header("MoldOS Setup")
+term.write("Welcome to the MoldOS installation wizard.")
 term.setCursorPos(1, 7)
-term.write("Сейчас потребуется задать несколько настроек.")
-waitKey("Нажми любую клавишу, чтобы начать...")
+term.write("You will now be asked a few setup questions.")
+waitKey("Press any key to begin...")
 
 -- ============================================
---  ШАГ 2: Язык
+--  STEP 2: Language
 -- ============================================
 
-local _, language = selectMenu("Выбор языка", {
-    "Русский",
+local _, language = selectMenu("Select Language", {
     "English",
+    "Russian",
 })
 
 -- ============================================
---  ШАГ 3: Страна
+--  STEP 3: Country
 -- ============================================
 
-local _, country = selectMenu("Выбор страны", {
-    "Россия",
-    "Молдова",
-    "Украина",
-    "Беларусь",
-    "Другая",
+local _, country = selectMenu("Select Country", {
+    "Moldova",
+    "Russia",
+    "Ukraine",
+    "Belarus",
+    "Other",
 })
 
 -- ============================================
---  ШАГ 4: Часовой пояс
+--  STEP 4: Time zone
 -- ============================================
 
-local _, timezone = selectMenu("Часовой пояс", {
-    "UTC+2 (Кишинёв)",
-    "UTC+3 (Москва)",
-    "UTC+2 (Киев)",
+local _, timezone = selectMenu("Time Zone", {
+    "UTC+2 (Chisinau)",
+    "UTC+3 (Moscow)",
+    "UTC+2 (Kyiv)",
     "UTC+0",
-    "Другой",
+    "Other",
 })
 
 -- ============================================
---  ШАГ 5: Профиль пользователя
+--  STEP 5: User profile
 -- ============================================
 
-local username = textInput("Создание профиля", "Введите имя пользователя:", nil, false)
-local password = textInput("Создание профиля", "Придумайте пароль (можно оставить пустым):", "*", true)
+local username = textInput("Create Profile", "Enter username:", nil, false)
+local password = textInput("Create Profile", "Set a password (leave empty for none):", "*", true)
 
 -- ============================================
---  ШАГ 6: Подтверждение
+--  STEP 6: Confirmation
 -- ============================================
 
-header("Проверьте данные")
-term.write("Язык: " .. language)
-term.setCursorPos(1, 7); term.write("Страна: " .. country)
-term.setCursorPos(1, 8); term.write("Часовой пояс: " .. timezone)
-term.setCursorPos(1, 9); term.write("Пользователь: " .. username)
-term.setCursorPos(1, 10); term.write("Пароль: " .. (password == "" and "(не задан)" or string.rep("*", #password)))
+header("Review your settings")
+term.write("Language: " .. language)
+term.setCursorPos(1, 7); term.write("Country: " .. country)
+term.setCursorPos(1, 8); term.write("Time zone: " .. timezone)
+term.setCursorPos(1, 9); term.write("Username: " .. username)
+term.setCursorPos(1, 10); term.write("Password: " .. (password == "" and "(none)" or string.rep("*", #password)))
 term.setCursorPos(1, 12)
-term.write("Enter - начать установку, любая другая - отмена")
+term.write("Enter - start installation, any other key - cancel")
 
 local _, key = os.pullEvent("key")
 if key ~= keys.enter then
     clear()
-    print("Установка отменена.")
+    print("Installation cancelled.")
     return
 end
 
 -- ============================================
---  ШАГ 7: Установка
+--  STEP 7: Installation
 -- ============================================
 
-header("Установка MoldOS")
+header("Installing MoldOS")
 
-progressStep("Подготовка системы...", 5, 0.6)
+progressStep("Preparing system...", 5, 0.6)
 
 if not fs.exists("/os") then fs.makeDir("/os") end
 if not fs.exists("/os/apps") then fs.makeDir("/os/apps") end
 if not fs.exists("/os/data") then fs.makeDir("/os/data") end
 
-progressStep("Сохранение настроек...", 8, 0.6)
+progressStep("Saving settings...", 8, 0.6)
 
 local config = {
     language = language,
@@ -210,7 +210,7 @@ local cfgFile = fs.open("/os/data/config.lua", "w")
 cfgFile.write(textutils.serialize(config))
 cfgFile.close()
 
-progressStep("Создание учётной записи...", 14, 0.8)
+progressStep("Creating user account...", 14, 0.8)
 
 local users = {}
 users[username] = { password = password }
@@ -218,9 +218,9 @@ local usersFile = fs.open("/os/data/users.lua", "w")
 usersFile.write(textutils.serialize(users))
 usersFile.close()
 
-header("Установка MoldOS")
+header("Installing MoldOS")
 term.setCursorPos(4, 5)
-term.write("Скачивание файлов с GitHub...")
+term.write("Downloading files from GitHub...")
 
 local downloadY = 7
 local failedFiles = {}
@@ -250,7 +250,7 @@ for i, item in ipairs(FILES_TO_DOWNLOAD) do
     else
         term.setCursorPos(W - 10, downloadY + i - 1)
         term.setTextColor(colors.red)
-        term.write("ОШИБКА")
+        term.write("FAILED")
         term.setTextColor(colors.white)
         table.insert(failedFiles, item.path)
     end
@@ -265,28 +265,28 @@ if not fs.exists("/startup.lua") then
 end
 
 if #failedFiles > 0 then
-    header("Ошибка установки")
-    term.write("Не удалось скачать файлы:")
+    header("Installation Error")
+    term.write("Failed to download files:")
     for i, f in ipairs(failedFiles) do
         term.setCursorPos(4, 6 + i)
         term.write(f)
     end
     term.setCursorPos(1, 6 + #failedFiles + 2)
-    term.write("Проверь, что HTTP включён в конфиге сервера")
+    term.write("Check that HTTP is enabled on the server")
     term.setCursorPos(1, 6 + #failedFiles + 3)
-    term.write("и что ссылка REPO_BASE в installer.lua верна.")
+    term.write("and that REPO_BASE in installer.lua is correct.")
     waitKey()
     return
 end
 
-progressStep("Завершение установки...", 20, 0.6)
+progressStep("Finishing installation...", 20, 0.6)
 
 -- ============================================
---  ШАГ 8: Готово
+--  STEP 8: Done
 -- ============================================
 
-header("Установка завершена")
-center(6, "MoldOS успешно установлена!")
-center(8, "Компьютер сейчас перезагрузится.")
+header("Installation Complete")
+center(6, "MoldOS was installed successfully!")
+center(8, "The computer will now reboot.")
 sleep(2)
 os.reboot()
