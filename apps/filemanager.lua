@@ -1,5 +1,5 @@
 -- MoldOS App: filemanager
--- Simple file manager with arrow-key navigation
+-- Mouse-controlled file manager
 
 local W, H = term.getSize()
 local currentPath = "/"
@@ -24,55 +24,61 @@ local function getEntries(path)
     return entries
 end
 
-local function draw(entries, selected)
+-- toolbar buttons: [New Folder] [Delete] [Quit], plus entry rows
+local function draw(entries, selectedIdx)
     clear()
     term.write("=== File Manager: " .. currentPath .. " ===")
     term.setCursorPos(1, 2)
     term.write(string.rep("-", W))
 
-    local startY = 3
-    local maxVisible = H - 5
+    -- toolbar
+    local toolbarY = H
+    term.setCursorPos(1, toolbarY)
+    term.write("[New Folder]  [Delete]  [Quit]")
 
-    local scrollOffset = 0
-    if selected > maxVisible then
-        scrollOffset = selected - maxVisible
-    end
+    local startY = 3
+    local maxVisible = H - 4
+    local rows = {}
 
     for i = 1, math.min(#entries, maxVisible) do
-        local idx = i + scrollOffset
-        if entries[idx] then
-            local entryPath = fs.combine(currentPath, entries[idx])
-            local isDir = entries[idx] == ".." or (fs.exists(entryPath) and fs.isDir(entryPath))
-            term.setCursorPos(3, startY + i - 1)
+        local name = entries[i]
+        local entryPath = fs.combine(currentPath, name)
+        local isDir = name == ".." or (fs.exists(entryPath) and fs.isDir(entryPath))
+        local y = startY + i - 1
+        term.setCursorPos(3, y)
 
-            if idx == selected then
-                term.setTextColor(colors.white)
-                term.write("> ")
-            else
-                term.setTextColor(colors.lightGray)
-                term.write("  ")
-            end
-
-            if isDir then
-                term.write("[" .. entries[idx] .. "]")
-            else
-                term.write(entries[idx])
-            end
+        if i == selectedIdx then
+            term.setTextColor(colors.yellow)
+            term.write("> ")
+        else
+            term.setTextColor(colors.white)
+            term.write("  ")
         end
+
+        if isDir then
+            term.write("[" .. name .. "]")
+        else
+            term.write(name)
+        end
+        term.setTextColor(colors.white)
+
+        table.insert(rows, { y = y, name = name, isDir = isDir })
     end
 
-    term.setTextColor(colors.white)
-    term.setCursorPos(1, H)
-    term.write("Enter-open  D-delete  N-new folder  Q-quit")
+    return rows, toolbarY
 end
 
 local function confirmDelete(name)
     clear()
-    term.write("Delete '" .. name .. "'? (y/n)")
+    term.write("Delete '" .. name .. "'?")
+    term.setCursorPos(1, 3)
+    term.write("[ Yes ]      [ No ]")
     while true do
-        local _, key = os.pullEvent("key")
-        if key == keys.y then return true end
-        if key == keys.n then return false end
+        local _, _, cx, cy = os.pullEvent("mouse_click")
+        if cy == 3 then
+            if cx >= 1 and cx <= 8 then return true end
+            if cx >= 14 and cx <= 20 then return false end
+        end
     end
 end
 
@@ -92,55 +98,53 @@ local function newFolder()
 end
 
 local function main()
-    local selected = 1
+    local selected = nil
 
     while true do
         local entries = getEntries(currentPath)
-        if selected > #entries then selected = #entries end
-        if selected < 1 then selected = 1 end
+        local rows, toolbarY = draw(entries, selected)
 
-        draw(entries, selected)
+        local _, _, cx, cy = os.pullEvent("mouse_click")
 
-        local _, key = os.pullEvent("key")
-
-        if key == keys.up then
-            selected = selected - 1
-            if selected < 1 then selected = #entries end
-        elseif key == keys.down then
-            selected = selected + 1
-            if selected > #entries then selected = 1 end
-        elseif key == keys.enter then
-            local name = entries[selected]
-            if name == ".." then
-                currentPath = fs.getDir(currentPath)
-                if currentPath == "" then currentPath = "/" end
-                selected = 1
-            else
-                local entryPath = fs.combine(currentPath, name)
-                if fs.isDir(entryPath) then
-                    currentPath = entryPath
-                    selected = 1
-                else
-                    shell.run("edit", entryPath)
-                end
-            end
-        elseif key == keys.d then
-            local name = entries[selected]
-            if name and name ~= ".." then
-                if confirmDelete(name) then
-                    local entryPath = fs.combine(currentPath, name)
-                    local ok, err = pcall(fs.delete, entryPath)
-                    if not ok then
-                        printError("Failed to delete: " .. tostring(err))
-                        sleep(1.5)
+        if cy == toolbarY then
+            if cx >= 1 and cx <= 12 then
+                newFolder()
+            elseif cx >= 15 and cx <= 22 then
+                if selected and entries[selected] and entries[selected] ~= ".." then
+                    local name = entries[selected]
+                    if confirmDelete(name) then
+                        local entryPath = fs.combine(currentPath, name)
+                        local ok, err = pcall(fs.delete, entryPath)
+                        if not ok then
+                            printError("Failed to delete: " .. tostring(err))
+                            sleep(1.5)
+                        end
+                        selected = nil
                     end
-                    selected = 1
+                end
+            elseif cx >= 25 and cx <= 31 then
+                break
+            end
+        else
+            for i, row in ipairs(rows) do
+                if cy == row.y then
+                    if selected == i then
+                        if row.name == ".." then
+                            currentPath = fs.getDir(currentPath)
+                            if currentPath == "" then currentPath = "/" end
+                            selected = nil
+                        elseif row.isDir then
+                            currentPath = fs.combine(currentPath, row.name)
+                            selected = nil
+                        else
+                            shell.run("edit", fs.combine(currentPath, row.name))
+                        end
+                    else
+                        selected = i
+                    end
+                    break
                 end
             end
-        elseif key == keys.n then
-            newFolder()
-        elseif key == keys.q then
-            break
         end
     end
 
