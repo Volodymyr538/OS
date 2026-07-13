@@ -4,9 +4,6 @@
 local W, H = term.getSize()
 local NOTES_DIR = "/os/data/notes"
 
-local lang = dofile("/os/lib/lang.lua")
-local t = lang.t
-
 local function clear()
     term.setBackgroundColor(colors.black)
     term.setTextColor(colors.white)
@@ -39,21 +36,21 @@ end
 
 local function newNote()
     clear()
-    print(t("new_note_title"))
+    print("New note title:")
     write("> ")
     local title = read()
     if not title or title == "" then return end
 
     local path = fs.combine(NOTES_DIR, title)
     if fs.exists(path) then
-        print(t("note_exists"))
+        print("A note with that title already exists.")
         sleep(1.5)
         return
     end
 
     clear()
-    print(t("writing_note") .. " " .. title)
-    print(t("type_note"))
+    print("Writing note: " .. title)
+    print("Type your note. Finish with an empty line.")
     print("")
 
     local lines = {}
@@ -81,22 +78,16 @@ local function viewNote(name)
         if y > H - 2 then break end
     end
 
-    local deleteLabel = "[ " .. t("delete_btn") .. " ]"
-    local backLabel = "[ " .. t("back") .. " ]"
-    local backX = #deleteLabel + 6
-
     term.setCursorPos(1, H)
-    term.write(deleteLabel)
-    term.setCursorPos(backX, H)
-    term.write(backLabel)
+    term.write("[ Delete ]          [ Back ]")
 
     while true do
         local _, _, cx, cy = os.pullEvent("mouse_click")
         if cy == H then
-            if cx >= 1 and cx <= #deleteLabel then
+            if cx >= 1 and cx <= 10 then
                 fs.delete(fs.combine(NOTES_DIR, name))
                 return
-            elseif cx >= backX and cx <= backX + #backLabel then
+            elseif cx >= 21 and cx <= 28 then
                 return
             end
         end
@@ -106,7 +97,7 @@ end
 local function mainMenu()
     while true do
         clear()
-        term.write("=== " .. t("notes_title") .. " ===")
+        term.write("=== MoldOS Notes ===")
         term.setCursorPos(1, 2)
         term.write(string.rep("-", W))
 
@@ -117,7 +108,7 @@ local function mainMenu()
         if #notes == 0 then
             term.setCursorPos(4, y)
             term.setTextColor(colors.lightGray)
-            term.write(t("no_notes"))
+            term.write("(no notes yet)")
             term.setTextColor(colors.white)
             y = y + 1
         else
@@ -129,20 +120,14 @@ local function mainMenu()
             end
         end
 
-        local newNoteLabel = "[ " .. t("new_note_btn") .. " ]"
-        local quitLabel = "[ " .. t("quit") .. " ]"
-        local quitX = #newNoteLabel + 6
-
         term.setCursorPos(1, H)
-        term.write(newNoteLabel)
-        term.setCursorPos(quitX, H)
-        term.write(quitLabel)
+        term.write("[ New Note ]          [ Quit ]")
 
         local _, _, cx, cy = os.pullEvent("mouse_click")
         if cy == H then
-            if cx >= 1 and cx <= #newNoteLabel then
+            if cx >= 1 and cx <= 12 then
                 newNote()
-            elseif cx >= quitX and cx <= quitX + #quitLabel then
+            elseif cx >= 23 and cx <= 29 then
                 break
             end
         else
