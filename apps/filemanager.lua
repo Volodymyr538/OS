@@ -5,6 +5,9 @@ local W, H = term.getSize()
 local currentPath = "/"
 local clipboard = nil
 
+local lang = dofile("/os/lib/lang.lua")
+local t = lang.t
+
 local function clear()
     term.setBackgroundColor(colors.black)
     term.setTextColor(colors.white)
@@ -27,7 +30,7 @@ end
 
 local function draw(entries, selectedIdx)
     clear()
-    term.write("=== File Manager: " .. currentPath .. " ===")
+    term.write("=== " .. t("file_manager_title") .. " " .. currentPath .. " ===")
     term.setCursorPos(1, 2)
     term.write(string.rep("-", W))
 
@@ -38,7 +41,7 @@ local function draw(entries, selectedIdx)
     if clipboard then
         term.setCursorPos(1, H - 1)
         term.setTextColor(colors.lightGray)
-        term.write("Clipboard: " .. clipboard.name)
+        term.write(t("clipboard_label") .. " " .. clipboard.name)
         term.setTextColor(colors.white)
     end
 
@@ -76,21 +79,26 @@ end
 
 local function confirmDelete(name)
     clear()
-    term.write("Delete '" .. name .. "'?")
+    term.write(t("delete_confirm") .. " '" .. name .. "'?")
     term.setCursorPos(1, 3)
-    term.write("[ Yes ]      [ No ]")
+    local yesLabel = "[ " .. t("yes") .. " ]"
+    local noLabel = "[ " .. t("no") .. " ]"
+    local noX = #yesLabel + 6
+    term.write(yesLabel)
+    term.setCursorPos(noX, 3)
+    term.write(noLabel)
     while true do
         local _, _, cx, cy = os.pullEvent("mouse_click")
         if cy == 3 then
-            if cx >= 1 and cx <= 8 then return true end
-            if cx >= 14 and cx <= 20 then return false end
+            if cx >= 1 and cx <= #yesLabel then return true end
+            if cx >= noX and cx <= noX + #noLabel then return false end
         end
     end
 end
 
 local function newFolder()
     clear()
-    term.write("New folder name:")
+    term.write(t("new_folder_name"))
     term.setCursorPos(1, 3)
     write("> ")
     local name = read()
@@ -105,7 +113,7 @@ end
 
 local function renameEntry(name)
     clear()
-    term.write("Rename '" .. name .. "' to:")
+    term.write(t("rename_to") .. " '" .. name .. "'")
     term.setCursorPos(1, 3)
     write("> ")
     local newName = read()
@@ -130,16 +138,25 @@ local function pasteHere()
     local destPath = fs.combine(currentPath, clipboard.name)
     if fs.exists(destPath) then
         clear()
-        term.write("'" .. clipboard.name .. "' already exists here.")
+        term.write("'" .. clipboard.name .. "' " .. t("already_exists"))
         term.setCursorPos(1, 3)
-        term.write("Overwrite? [ Yes ]  [ No ]")
+        local overwriteLabel = t("overwrite_question") .. " "
+        local yesLabel = "[ " .. t("yes") .. " ]"
+        local noLabel = "[ " .. t("no") .. " ]"
+        local yesX = #overwriteLabel + 1
+        local noX = yesX + #yesLabel + 2
+        term.write(overwriteLabel)
+        term.setCursorPos(yesX, 3)
+        term.write(yesLabel)
+        term.setCursorPos(noX, 3)
+        term.write(noLabel)
         while true do
             local _, _, cx, cy = os.pullEvent("mouse_click")
             if cy == 3 then
-                if cx >= 1 and cx <= 8 then
+                if cx >= yesX and cx <= yesX + #yesLabel then
                     fs.delete(destPath)
                     break
-                elseif cx >= 12 and cx <= 18 then
+                elseif cx >= noX and cx <= noX + #noLabel then
                     return
                 end
             end
