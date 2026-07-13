@@ -118,7 +118,6 @@ local function main()
     parallel.waitForAny(gameLoop, inputLoop)
 
     clear()
-    term.setCursorPos(1, math.floor(H / 2))
     local msg = "Game Over! Final score: " .. score
     term.setCursorPos(math.floor((W - #msg) / 2) + 1, math.floor(H / 2))
     term.write(msg)
