@@ -6,16 +6,12 @@
 local W, H = term.getSize()
 local DATA_DIR = "/os/data"
 local APPS_DIR = "/os/apps"
-local osName, osVersion = "MoldOS", "1.3"
-
-local lang = dofile("/os/lib/lang.lua")
-local t = lang.t
+local osName, osVersion = "MoldOS", "1.4"
 
 -- GitHub repo used for update / install
 local REPO_BASE = "https://raw.githubusercontent.com/Volodymyr538/OS/main/"
 local SYSTEM_FILES = {
     { url = REPO_BASE .. "os/startup.lua", path = "/os/startup.lua" },
-    { url = REPO_BASE .. "lib/lang.lua", path = "/os/lib/lang.lua" },
 }
 local APP_REGISTRY = {
     filemanager  = REPO_BASE .. "apps/filemanager.lua",
@@ -104,7 +100,7 @@ local users = loadTable(DATA_DIR .. "/users.lua") or {}
 local function bootScreen()
     clear()
     center(math.floor(H / 2) - 1, osName .. " v" .. osVersion)
-    center(math.floor(H / 2) + 1, t("starting_system"))
+    center(math.floor(H / 2) + 1, "Starting system...")
 
     local barWidth = math.min(W - 4, 30)
     local barX = math.floor((W - barWidth) / 2) + 1
@@ -137,7 +133,7 @@ local function loginScreen()
     while true do
         clear()
         center(3, osName)
-        center(5, t("select_account"))
+        center(5, "Select your account")
         term.setCursorPos(1, 4)
         term.write(string.rep("-", W))
 
@@ -164,12 +160,12 @@ local function loginScreen()
             while true do
                 clear()
                 center(3, osName)
-                center(5, t("welcome_back") .. " " .. chosen)
+                center(5, "Welcome back, " .. chosen)
                 term.setCursorPos(1, 4)
                 term.write(string.rep("-", W))
 
                 term.setCursorPos(4, 8)
-                term.write(t("password_colon") .. " ")
+                term.write("Password: ")
                 local inputPass = read("*")
 
                 if userData.password == "" or userData.password == inputPass then
@@ -177,7 +173,7 @@ local function loginScreen()
                 else
                     term.setCursorPos(4, 10)
                     term.setTextColor(colors.red)
-                    term.write(t("incorrect_password"))
+                    term.write("Incorrect password.")
                     term.setTextColor(colors.white)
                     sleep(1.2)
                     break
@@ -194,13 +190,13 @@ end
 local function getGreeting()
     local hour = os.time("ingame")
     if hour >= 5 and hour < 12 then
-        return t("good_morning")
+        return "Good morning"
     elseif hour >= 12 and hour < 17 then
-        return t("good_afternoon")
+        return "Good afternoon"
     elseif hour >= 17 and hour < 21 then
-        return t("good_evening")
+        return "Good evening"
     else
-        return t("good_night")
+        return "Good night"
     end
 end
 
@@ -242,7 +238,7 @@ end
 
 local function runUpdate()
     clear()
-    print(t("checking_updates"))
+    print("Checking for updates...")
     print("")
 
     local anyFailed = false
@@ -259,50 +255,50 @@ local function runUpdate()
 
     print("")
     if anyFailed then
-        print(t("update_some_failed"))
+        print("Some files failed to update. Check your connection.")
     else
-        print(t("update_complete"))
+        print("Update complete! Rebooting...")
         sleep(1.5)
         os.reboot()
     end
     print("")
-    print(t("click_go_back"))
+    print("Click anywhere to go back...")
     os.pullEvent("mouse_click")
 end
 
 local function runInstall()
     clear()
-    print("=== " .. t("install_app") .. " ===")
+    print("=== Install App ===")
     print("")
-    print(t("available_apps"))
+    print("Available apps:")
     for name in pairs(APP_REGISTRY) do
         print("  " .. name)
     end
     print("")
-    write(t("enter_app_name") .. " ")
+    write("Enter app name to install: ")
     local appName = read()
 
     local url = APP_REGISTRY[appName]
     if not url then
         print("")
-        print(t("unknown_app") .. " " .. tostring(appName))
+        print("Unknown app: " .. tostring(appName))
         print("")
-        print(t("click_go_back"))
+        print("Click anywhere to go back...")
         os.pullEvent("mouse_click")
         return
     end
 
     print("")
-    print(t("installing_dots") .. " '" .. appName .. "'...")
+    print("Installing '" .. appName .. "'...")
     local path = fs.combine(APPS_DIR, appName .. ".lua")
     local ok, err = downloadFile(url, path)
     if ok then
-        print(t("installed_success"))
+        print("Installed successfully!")
     else
-        print(t("install_failed") .. " " .. tostring(err))
+        print("Failed: " .. tostring(err))
     end
     print("")
-    print(t("click_go_back"))
+    print("Click anywhere to go back...")
     os.pullEvent("mouse_click")
 end
 
@@ -314,34 +310,34 @@ local currentUser = nil
 
 local function changePassword()
     clear()
-    print("=== " .. t("change_password") .. " ===")
+    print("=== Change Password ===")
     print("")
-    write(t("current_password") .. " ")
+    write("Current password: ")
     local current = read("*")
 
     local userData = users[currentUser]
     if userData.password ~= "" and userData.password ~= current then
         print("")
-        print(t("incorrect_current"))
+        print("Incorrect current password.")
         sleep(1.5)
         return
     end
 
-    write(t("new_password") .. " ")
+    write("New password (leave empty for none): ")
     local newPass = read("*")
     userData.password = newPass
     saveTable(DATA_DIR .. "/users.lua", users)
 
     print("")
-    print(t("password_changed"))
+    print("Password changed successfully!")
     sleep(1.2)
 end
 
 local function renameUser()
     clear()
-    print("=== " .. t("change_username") .. " ===")
+    print("=== Change Username ===")
     print("")
-    write(t("new_username") .. " ")
+    write("New username: ")
     local newName = read()
 
     if not newName or newName == "" then
@@ -349,7 +345,7 @@ local function renameUser()
     end
     if users[newName] then
         print("")
-        print(t("username_taken"))
+        print("That username is already taken.")
         sleep(1.5)
         return
     end
@@ -360,15 +356,15 @@ local function renameUser()
     saveTable(DATA_DIR .. "/users.lua", users)
 
     print("")
-    print(t("username_changed") .. " '" .. newName .. "'!")
+    print("Username changed to '" .. newName .. "'!")
     sleep(1.2)
 end
 
 local function createUser()
     clear()
-    print("=== " .. t("create_new_user") .. " ===")
+    print("=== New User ===")
     print("")
-    write(t("username_label2") .. " ")
+    write("Username: ")
     local newName = read()
 
     if not newName or newName == "" then
@@ -376,42 +372,42 @@ local function createUser()
     end
     if users[newName] then
         print("")
-        print(t("user_exists"))
+        print("That username already exists.")
         sleep(1.5)
         return
     end
 
-    write(t("new_password") .. " ")
+    write("Password (leave empty for none): ")
     local newPass = read("*")
 
     users[newName] = { password = newPass }
     saveTable(DATA_DIR .. "/users.lua", users)
 
     print("")
-    print(t("user_created") .. " ('" .. newName .. "')")
+    print("User '" .. newName .. "' created!")
     sleep(1.2)
 end
 
 local function deleteUser()
     clear()
-    print("=== " .. t("delete_user") .. " ===")
+    print("=== Delete a User ===")
     print("")
     for name in pairs(users) do
         print("  " .. name)
     end
     print("")
-    write(t("username_label2") .. " ")
+    write("Username to delete: ")
     local targetName = read()
 
     if targetName == currentUser then
         print("")
-        print(t("cannot_delete_self"))
+        print("You cannot delete the account you are logged into.")
         sleep(1.5)
         return
     end
     if not users[targetName] then
         print("")
-        print(t("user_not_found"))
+        print("User not found.")
         sleep(1.5)
         return
     end
@@ -419,43 +415,22 @@ local function deleteUser()
     users[targetName] = nil
     saveTable(DATA_DIR .. "/users.lua", users)
     print("")
-    print("'" .. targetName .. "' " .. t("user_deleted"))
+    print("User '" .. targetName .. "' deleted.")
     sleep(1.2)
-end
-
-local function changeLanguage()
-    clear()
-    term.write(t("select_ui_language"))
-    term.setCursorPos(4, 3)
-    term.write("[ English ]")
-    term.setCursorPos(4, 5)
-    term.write("[ Русский ]")
-
-    while true do
-        local _, _, cx, cy = os.pullEvent("mouse_click")
-        if cy == 3 then
-            lang.setLanguage("en")
-            return
-        elseif cy == 5 then
-            lang.setLanguage("ru")
-            return
-        end
-    end
 end
 
 local function runSettings()
     local options = {
-        { label = t("change_password"), action = changePassword },
-        { label = t("change_username"), action = renameUser },
-        { label = t("create_new_user"), action = createUser },
-        { label = t("delete_user"),   action = deleteUser },
-        { label = t("select_ui_language"), action = changeLanguage },
-        { label = t("back"),            action = function() return "back" end },
+        { label = "Change Password", action = changePassword },
+        { label = "Change Username", action = renameUser },
+        { label = "Create New User", action = createUser },
+        { label = "Delete a User",   action = deleteUser },
+        { label = "Back",            action = function() return "back" end },
     }
 
     while true do
         clear()
-        term.write("=== " .. t("settings") .. " ===")
+        term.write("=== Settings ===")
         local y = 3
         local rows = {}
         for _, opt in ipairs(options) do
@@ -491,9 +466,9 @@ local function rednetChat()
     clear()
     local modem = peripheral.find("modem")
     if not modem then
-        print(t("no_modem"))
+        print("No modem attached to this computer.")
         print("")
-        print(t("click_go_back"))
+        print("Click anywhere to go back...")
         os.pullEvent("mouse_click")
         return
     end
@@ -502,14 +477,14 @@ local function rednetChat()
         rednet.open(peripheral.getName(modem))
     end
 
-    print("=== " .. t("network_chat") .. " ===")
-    print(t("your_computer_id") .. " " .. os.getComputerID())
+    print("=== MoldOS Chat ===")
+    print("Your computer ID: " .. os.getComputerID())
     print("")
-    print(t("enter_target_id"))
+    print("Enter target computer ID (or 'all' to broadcast):")
     write("> ")
     local target = read()
 
-    print(t("type_message"))
+    print("Type your message. Type 'exit' to quit chat.")
     print("")
 
     local function listenLoop()
@@ -533,7 +508,7 @@ local function rednetChat()
                 if targetId then
                     rednet.send(targetId, msg, "moldos_chat")
                 else
-                    print(t("invalid_target"))
+                    print("Invalid target ID.")
                 end
             end
         end
@@ -548,23 +523,23 @@ end
 -- ============================================
 
 local systemActions = {
-    { label = t("about_system"),  action = function()
+    { label = "About System",  action = function()
         clear()
         print(osName .. " v" .. osVersion)
-        print(t("country_label") .. " " .. tostring(config.country))
-        print(t("timezone_label") .. " " .. tostring(config.timezone))
+        print("Country: " .. tostring(config.country))
+        print("Time zone: " .. tostring(config.timezone))
         print(_HOST)
         print("")
-        print(t("click_go_back"))
+        print("Click anywhere to go back...")
         os.pullEvent("mouse_click")
     end },
-    { label = t("network_chat"), action = rednetChat },
-    { label = t("settings"), action = runSettings },
-    { label = t("check_updates"), action = runUpdate },
-    { label = t("install_app"), action = runInstall },
-    { label = t("log_out"), action = logOut },
-    { label = t("reboot"),   action = function() os.reboot() end },
-    { label = t("shutdown"), action = function() os.shutdown() end },
+    { label = "Network Chat", action = rednetChat },
+    { label = "Settings", action = runSettings },
+    { label = "Check for Updates", action = runUpdate },
+    { label = "Install App", action = runInstall },
+    { label = "Log Out", action = logOut },
+    { label = "Reboot",   action = function() os.reboot() end },
+    { label = "Shutdown", action = function() os.shutdown() end },
 }
 
 local function getAppList()
@@ -602,14 +577,14 @@ local function drawMenu(apps)
 
     term.setCursorPos(4, y)
     term.setTextColor(colors.yellow)
-    term.write(t("apps_section"))
+    term.write("-- Apps --")
     term.setTextColor(colors.white)
     y = y + 1
 
     if #apps == 0 then
         term.setCursorPos(4, y)
         term.setTextColor(colors.lightGray)
-        term.write(t("no_apps"))
+        term.write("(no apps installed)")
         term.setTextColor(colors.white)
         y = y + 1
     else
@@ -624,7 +599,7 @@ local function drawMenu(apps)
     y = y + 1
     term.setCursorPos(4, y)
     term.setTextColor(colors.yellow)
-    term.write(t("system_section"))
+    term.write("-- System --")
     term.setTextColor(colors.white)
     y = y + 1
 
@@ -667,10 +642,10 @@ local function menuLoop()
                 local ok, err = pcall(row.action)
                 if not ok then
                     clear()
-                    print(t("error_running"))
+                    print("Error running program:")
                     print(err)
                     print("")
-                    print(t("click_go_back"))
+                    print("Click anywhere to go back...")
                     os.pullEvent("mouse_click")
                 end
                 break
