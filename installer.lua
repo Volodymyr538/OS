@@ -14,6 +14,7 @@ local FILES_TO_DOWNLOAD = {
     { url = REPO_BASE .. "apps/notes.lua",       path = "/os/apps/notes.lua" },
     { url = REPO_BASE .. "apps/snake.lua",       path = "/os/apps/snake.lua" },
     { url = REPO_BASE .. "apps/minesweeper.lua", path = "/os/apps/minesweeper.lua" },
+    { url = REPO_BASE .. "apps/textedit.lua",    path = "/os/apps/textedit.lua" },
 }
 
 local W, H = term.getSize()
